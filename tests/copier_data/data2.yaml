@@ -1,0 +1,12 @@
+# Data managed by upstream template
+repo_name: another_repo
+description: Doing crazy things! So many things!
+ssh_port_number: 54321
+
+# Data added based on the specifics of this template
+python_ci_versions:
+  - "3.12.7"
+  - "3.13.1"
+package_name: the-amazing-library
+primary_author: John Williams
+full_repo_url: https://www.github.com/baz

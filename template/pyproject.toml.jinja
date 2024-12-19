@@ -1,0 +1,46 @@
+{% raw %}[project]
+name = "{% endraw %}{{ package_name | replace('_', '-') }}{% raw %}"
+version = "0.1.0"
+description = "{% endraw %}{{ description }}{% raw %}"
+authors = [
+    {name = "{% endraw %}{{ primary_author }}{% raw %}"},
+
+]
+readme = "README.md"
+requires-python = ">={% endraw %}{{ python_version }}{% raw %}"
+classifiers = [
+    "Programming Language :: Python :: 3",
+{% endraw %}{% for item in python_ci_versions %}
+    {% raw %}"Programming Language :: Python :: {% endraw %}{{ item.split('.')[:2] | join('.') }}{% raw %}",{% endraw %}
+{% endfor %}{% raw %}
+]
+dependencies = [
+
+]
+
+
+[dependency-groups]
+dev = [
+    # Specific to this template
+
+
+    # Managed by upstream template
+    "pyright>={% endraw %}{{ pyright_version }}{% raw %}",
+    "pytest>={% endraw %}{{ pytest_version }}{% raw %}",
+    "pytest-cov>={% endraw %}{{ pytest_cov_version }}{% raw %}",
+    "pytest-randomly>={% endraw %}{{ pytest_randomly_version }}{% raw %}",
+    "sphinx=={% endraw %}{{ sphinx_version }}{% raw %}",
+]
+
+[tool.uv]
+package = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+publish-url = "https://upload.pypi.org/legacy/"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"{% endraw %}
