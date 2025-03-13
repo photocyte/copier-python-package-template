@@ -32,7 +32,7 @@ python_ci_versions:
     multiselect: true
     choices:
       - "3.12.7"
-      - "3.13.1"
+      - "3.13.2"
 
 
 
@@ -66,6 +66,11 @@ use_windows_in_exe_ci:
     help: Should CI in the instantiated template also use Windows runners for building and testing the executable?
     default: no
     when: is_frozen_executable
+
+use_codecov:
+    type: bool
+    help: Upload code coverage results to CodeCov?
+    default: no
 
 
 # Additional Settings
