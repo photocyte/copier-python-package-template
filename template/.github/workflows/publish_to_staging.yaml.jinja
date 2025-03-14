@@ -1,4 +1,4 @@
-{% raw %}name: Publish to Production Package Registry
+{% raw %}name: Publish to Staging Package Registry
 
 on:
   workflow_dispatch:
@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}{% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
           code-artifact-auth-role-name: CoreInfraBaseAccess
-          code-artifact-auth-role-account-id: {% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}
+          code-artifact-auth-role-account-id: "{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}"
           code-artifact-auth-region: {% endraw %}{{ aws_org_home_region }}{% endif %}{% raw %}
 
       - name: Unit test
@@ -91,11 +91,10 @@ jobs:
       - name: Install python tooling
         uses: ./.github/actions/install_deps_uv
         with:
-          python-version: {% endraw %}{{ python_version }}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
+          python-version: {% endraw %}{{ python_version }}{% raw %}{% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
           code-artifact-auth-role-name: CoreInfraBaseAccess
-          code-artifact-auth-role-account-id: {% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}
+          code-artifact-auth-role-account-id: "{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}"
           code-artifact-auth-region: {% endraw %}{{ aws_org_home_region }}{% endif %}{% raw %}
-
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
       - name: OIDC Auth for Installing any dependencies that uv may need for build (sometimes it likes to install setuptools...even if it's already in the package dependencies)
         uses: aws-actions/configure-aws-credentials@{% endraw %}{{ gha_configure_aws_credentials }}{% raw %}
@@ -108,12 +107,11 @@ jobs:
         run: |
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}          . .devcontainer/code-artifact-auth.sh{% endraw %}{% endif %}{% raw %}
           uv build --no-sources
-
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
       - name: OIDC Auth for Publishing to CodeArtifact
         uses: aws-actions/configure-aws-credentials@{% endraw %}{{ gha_configure_aws_credentials }}{% raw %}
         with:
-          role-to-assume: arn:aws:iam::{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}:role/GHA-CA-Primary-{% endraw %}{{ repo_name }}{% raw %}
+          role-to-assume: arn:aws:iam::{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}:role/GHA-CA-Staging-{% endraw %}{{ repo_name }}{% raw %}
           aws-region: {% endraw %}{{ aws_org_home_region }}{% raw %}
 
 {% endraw %}{% endif %}{% raw %}
@@ -121,4 +119,4 @@ jobs:
       - name: Publish package
         run: |
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}          . .devcontainer/code-artifact-auth.sh{% endraw %}{% endif %}{% raw %}
-          uv publish --verbose --index {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}code-artifact-primary --username aws --password "$TWINE_PASSWORD"{% else %}pypi{% endif %}
+          uv publish --verbose --index {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}code-artifact-staging --username aws --password "$TWINE_PASSWORD"{% else %}testpypi{% endif %}

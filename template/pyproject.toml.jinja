@@ -21,7 +21,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    # Specific to this template
+    # Specific to this repository
 
 
     # Managed by upstream template
@@ -53,9 +53,13 @@ publish-url = "https://test.pypi.org/legacy/"{% endraw %}{% else %}{% raw %}
 default = true
 name = "code-artifact-primary"
 username = "aws"
+publish-username = "aws"
 url = "https://{% endraw %}{{ repo_org_name }}{% raw %}-{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}.d.codeartifact.{% endraw %}{{ aws_org_home_region }}{% raw %}.amazonaws.com/pypi/{% endraw %}{{ repo_org_name }}{% raw %}-primary/simple/"
+publish-url = "https://{% endraw %}{{ repo_org_name }}{% raw %}-{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}.d.codeartifact.{% endraw %}{{ aws_org_home_region }}{% raw %}.amazonaws.com/pypi/{% endraw %}{{ repo_org_name }}{% raw %}-primary/"
 
 [[tool.uv.index]]
 name = "code-artifact-staging"
 username = "aws"
-url = "https://{% endraw %}{{ repo_org_name }}{% raw %}-{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}.d.codeartifact.{% endraw %}{{ aws_org_home_region }}{% raw %}.amazonaws.com/pypi/{% endraw %}{{ repo_org_name }}{% raw %}-staging/simple/"{% endraw %}{% endif %}
+publish-username = "aws"
+url = "https://{% endraw %}{{ repo_org_name }}{% raw %}-{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}.d.codeartifact.{% endraw %}{{ aws_org_home_region }}{% raw %}.amazonaws.com/pypi/{% endraw %}{{ repo_org_name }}{% raw %}-staging/simple/"
+publish-url = "https://{% endraw %}{{ repo_org_name }}{% raw %}-{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}.d.codeartifact.{% endraw %}{{ aws_org_home_region }}{% raw %}.amazonaws.com/pypi/{% endraw %}{{ repo_org_name }}{% raw %}-staging/"{% endraw %}{% endif %}
