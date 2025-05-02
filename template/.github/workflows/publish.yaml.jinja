@@ -1,8 +1,13 @@
-{% raw %}name: Publish to Production Package Registry
+{% raw %}name: Publish to Package Registry
 
 on:
   workflow_dispatch:
-
+    inputs:
+      publish_to_primary:
+        description: 'Publish to Primary Registry'
+        type: boolean
+        required: false
+        default: false
 env:
   PYTHONUNBUFFERED: True
   PRE_COMMIT_HOME: ${{ github.workspace }}/.precommit_cache
@@ -12,6 +17,25 @@ permissions:
     contents: write # needed for mutex
 
 jobs:
+  get-values:
+    name: Get Values
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    outputs:
+      package-version: ${{ steps.extract-package-version.outputs.package_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@{% endraw %}{{ gha_checkout }}{% raw %}
+      - name: Setup python
+        uses: actions/setup-python@{% endraw %}{{ gha_setup_python }}{% raw %}
+        with:
+          python-version: {% endraw %}{{ python_version }}{% raw %}
+      - name: Extract package version
+        id: extract-package-version
+        run: |
+          VERSION=$(python3 ./.github/workflows/git_tag.py)
+          echo "Extracted version: $VERSION"
+          echo "package_version=$VERSION" >> $GITHUB_OUTPUT
+
   lint:
     name: Pre-commit
     runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
@@ -109,6 +133,30 @@ jobs:
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}          . .devcontainer/code-artifact-auth.sh{% endraw %}{% endif %}{% raw %}
           uv build --no-sources
 
+      - name: Upload build package
+        uses: actions/upload-artifact@{% endraw %}{{ gha_upload_artifact }}{% raw %}
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
+
+
+  publish-to-staging:
+    name: Publish Python distribution to Staging Package Registry
+    needs: [ build ]
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/{% endraw %}{{ package_name | replace('_', '-') }}{% raw %}
+    permissions:
+      attestations: write
+      id-token: write
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@{% endraw %}{{ gha_download_artifact }}{% raw %}
+        with:
+          name: python-package-distributions
+          path: dist/
 {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
       - name: OIDC Auth for Publishing to CodeArtifact
         uses: aws-actions/configure-aws-credentials@{% endraw %}{{ gha_configure_aws_credentials }}{% raw %}
@@ -116,9 +164,107 @@ jobs:
           role-to-assume: arn:aws:iam::{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}:role/GHA-CA-Primary-{% endraw %}{{ repo_name }}{% raw %}
           aws-region: {% endraw %}{{ aws_org_home_region }}{% raw %}
 
+      - name: Publish distribution to Code Artifact
+        run: |
+          . .devcontainer/code-artifact-auth.sh
+          uv publish --verbose --index code-artifact-primary --username aws --password "$TWINE_PASSWORD"
+
+{% endraw %}{% else %}{% raw %}
+      - name: Publish distribution to Test PyPI
+        uses: pypa/gh-action-pypi-publish@{% endraw %}{{ gha_pypi_publish }}{% raw %}
+        with:
+          attestations: false
+          repository-url: https://test.pypi.org/legacy/
 {% endraw %}{% endif %}{% raw %}
 
-      - name: Publish package
+
+  install-from-staging:
+    name: Install package from staging registry
+    needs: [ publish-to-staging, get-values ]
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    steps:
+      - name: Setup python
+        uses: actions/setup-python@{% endraw %}{{ gha_setup_python }}{% raw %}
+        with:
+          python-version: {% endraw %}{{ python_version }}{% raw %}
+{% endraw %}{% if python_package_registry == "PyPI" %}{% raw %}
+      - name: Sleep to allow PyPI Index to update before proceeding to the next step
+        uses: juliangruber/sleep-action@{% endraw %}{{ gha_sleep }}{% raw %}
+        with:
+          time: 60s{% endraw %}{% endif %}{% raw %}
+      - name: Install from staging registry
+        run: pip install -i https://test.pypi.org/simple/ {% endraw %}{{ package_name | replace('_', '-') }}{% raw %}==${{ needs.get-values.outputs.package-version }}
+      - name: Confirm library can be imported successfully
+        run: python -c "import {% endraw %}{{ package_name | replace('-', '_') }}{% raw %}"
+
+  create-tag:
+    name: Create the git tag
+    if: ${{ github.event.inputs.publish_to_primary }}
+    needs: [ install-from-staging ]
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@{% endraw %}{{ gha_checkout }}{% raw %}
+      - name: Setup python
+        uses: actions/setup-python@{% endraw %}{{ gha_setup_python }}{% raw %}
+        with:
+          python-version: {% endraw %}{{ python_version }}{% raw %}
+      - name: Confirm tag not already present
+        run: python3 ./.github/workflows/git_tag.py --confirm-tag-not-present
+      - name: Create tag
+        run: python3 ./.github/workflows/git_tag.py --push-tag-to-remote
+
+  publish-to-primary:
+    name: Publish Python distribution to Primary Package Registry
+    if: ${{ github.event.inputs.publish_to_primary }}
+    needs: [ create-tag ]
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    environment:
+      name: pypi
+      url: https://pypi.org/p/{% endraw %}{{ package_name | replace('_', '-') }}{% raw %}
+    permissions:
+      attestations: write
+      id-token: write
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@{% endraw %}{{ gha_download_artifact }}{% raw %}
+        with:
+          name: python-package-distributions
+          path: dist/
+{% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}
+      - name: OIDC Auth for Publishing to CodeArtifact
+        uses: aws-actions/configure-aws-credentials@{% endraw %}{{ gha_configure_aws_credentials }}{% raw %}
+        with:
+          role-to-assume: arn:aws:iam::{% endraw %}{{ aws_central_infrastructure_account_id }}{% raw %}:role/GHA-CA-Primary-{% endraw %}{{ repo_name }}{% raw %}
+          aws-region: {% endraw %}{{ aws_org_home_region }}{% raw %}
+
+      - name: Publish distribution to Code Artifact
         run: |
-{% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}{% raw %}          . .devcontainer/code-artifact-auth.sh{% endraw %}{% endif %}{% raw %}
-          uv publish --verbose --index {% endraw %}{% if python_package_registry == "AWS CodeArtifact" %}code-artifact-primary --username aws --password "$TWINE_PASSWORD"{% else %}pypi{% endif %}
+          . .devcontainer/code-artifact-auth.sh
+          uv publish --verbose --index code-artifact-primary --username aws --password "$TWINE_PASSWORD"
+
+{% endraw %}{% else %}{% raw %}
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@{% endraw %}{{ gha_pypi_publish }}{% raw %}
+        with:
+          attestations: false{% endraw %}{% endif %}{% raw %}
+
+  install-from-primary:
+    name: Install package from primary registry
+    if: ${{ github.event.inputs.publish_to_primary }}
+    needs: [ publish-to-primary, get-values ]
+    runs-on: {% endraw %}{{ gha_linux_runner }}{% raw %}
+    steps:
+      - name: Setup python
+        uses: actions/setup-python@{% endraw %}{{ gha_setup_python }}{% raw %}
+        with:
+          python-version: {% endraw %}{{ python_version }}{% raw %}
+{% endraw %}{% if python_package_registry == "PyPI" %}{% raw %}
+      - name: Sleep to allow PyPI Index to update before proceeding to the next step
+        uses: juliangruber/sleep-action@{% endraw %}{{ gha_sleep }}{% raw %}
+        with:
+          time: 60s{% endraw %}{% endif %}{% raw %}
+      - name: Install from primary registry
+        run: pip install {% endraw %}{{ package_name | replace('_', '-') }}{% raw %}==${{ needs.get-values.outputs.package-version }}
+      - name: Confirm library can be imported successfully
+        run: python -c "import {% endraw %}{{ package_name | replace('-', '_') }}{% raw %}"{% endraw %}
