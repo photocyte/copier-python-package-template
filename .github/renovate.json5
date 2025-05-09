@@ -19,4 +19,9 @@
       groupName: "all python dependencies",
     },
   ],
+
+  postUpgradeTasks: {
+    commands: ["echo $RENOVATE_ALLOWED_COMMANDS", "pre-commit run -a"],
+    executionMode: "update",
+  },
 }
