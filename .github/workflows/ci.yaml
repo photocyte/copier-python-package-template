@@ -5,7 +5,6 @@ on:
     branches-ignore:
       - 'gh-readonly-queue/**' # don't run (again) when on these special branches created during merge groups; the `on: merge_group` already triggers it.
   merge_group:
-  workflow_dispatch:
 
 env:
   PYTHONUNBUFFERED: True
@@ -16,7 +15,17 @@ permissions:
     contents: write # needed for mutex
 
 jobs:
+  get-values:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Update Devcontainer Hash
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        uses: ./.github/actions/update-devcontainer-hash
+        with:
+          branch: ${{ github.ref_name }}
+
   pre-commit:
+    needs: [ get-values ]
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +38,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ github.ref_name }} # explicitly get the head of
 
 
 
