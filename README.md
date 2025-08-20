@@ -1,10 +1,10 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-black.json)](https://github.com/copier-org/copier)
-[![Actions status](https://www.github.com/LabAutomationAndScreening/copier-python-package-template/actions/workflows/ci.yaml/badge.svg?branch=main)](https://www.github.com/LabAutomationAndScreening/copier-python-package-template/actions)
+[![Actions status](https://www.github.com/photocyte/copier-python-package-template/actions/workflows/ci.yaml/badge.svg?branch=main)](https://www.github.com/photocyte/copier-python-package-template/actions)
 [![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://www.github.com/LabAutomationAndScreening/copier-python-package-template)
 
 # Provenance
-Forked from https://github.com/LabAutomationAndScreening/copier-python-package-template , for my own bespoke needs. 
+Forked from https://github.com/LabAutomationAndScreening/copier-python-package-template , for my own bespoke needs & learning.
 
 # Usage
 To create a new repository using this template:
